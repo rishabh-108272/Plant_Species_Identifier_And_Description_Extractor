@@ -36,11 +36,18 @@ def get_plant_description(flower_name):
         response = requests.get(search_url)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
-        paragraph = soup.find('p', recursive=False)
-        if paragraph:
-            return paragraph.get_text(strip=True)
-        else:
-            return "Description not found."
+        
+        # Extract paragraphs and filter out empty or irrelevant ones
+        paragraphs = soup.find_all('p', recursive=True)
+        full_description = ""
+        
+        for paragraph in paragraphs:
+            text = paragraph.get_text(strip=True)
+            if text and not text.lower().startswith("see also") and len(text) > 50:  # Filter short or irrelevant content
+                full_description = text
+                break
+        
+        return full_description if full_description else "No detailed description found for this plant."
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
