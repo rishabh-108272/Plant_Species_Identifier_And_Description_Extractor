@@ -69,10 +69,24 @@ st.markdown("<h1>Hello, Plant Lover!</h1>", unsafe_allow_html=True)
 # Live Video Detection Section
 st.markdown("<h3>Live Plant Detection</h3>", unsafe_allow_html=True)
 
+# Get list of available cameras
+def get_camera_list():
+    camera_list = []
+    for i in range(5):  # Check first 5 camera devices
+        cap = cv2.VideoCapture(i)
+        if cap.isOpened():
+            camera_list.append(i)
+            cap.release()
+    return camera_list
+
+# Dropdown to select the camera
+camera_list = get_camera_list()
+selected_camera = st.selectbox("Select Camera", camera_list)
+
 # Video capture toggle
 video_capture = None
 if st.button("Start Video Capture"):
-    video_capture = cv2.VideoCapture(0)
+    video_capture = cv2.VideoCapture(selected_camera)
 
 if st.button("Stop Video Capture") and video_capture is not None:
     video_capture.release()
