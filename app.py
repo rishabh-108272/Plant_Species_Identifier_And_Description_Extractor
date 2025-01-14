@@ -7,11 +7,11 @@ import requests
 from bs4 import BeautifulSoup
 
 # Load YOLO models
-# models = {
-#     "leaf": YOLO("./models/leaf.pt", task='detect'),
-#     "flower": YOLO("./models/flower.pt", task='detect'),
-#     "fruit": YOLO("./models/fruit.pt", task='detect'),
-# }
+models = {
+    "leaf": YOLO("./models/leaf.pt", task='detect'),
+    "flower": YOLO("./models/flower.pt", task='detect'),
+    "fruit": YOLO("./models/fruit.pt", task='detect'),
+}
 
 # Load Flower Classifier Model
 flower_classifier = load_model("./models/flower_classifier_model.h5")
