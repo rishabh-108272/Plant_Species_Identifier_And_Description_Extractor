@@ -2,10 +2,11 @@ import streamlit as st
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
+from streamlit_webrtc import VideoTransformerBase, webrtc_streamer
 from ultralytics import YOLO
 import requests
 from bs4 import BeautifulSoup
-
+import av
 # Load YOLO models
 models = {
     "leaf": YOLO("./models/leaf.pt", task='detect'),
@@ -51,6 +52,28 @@ def get_plant_description(flower_name):
     except Exception as e:
         return f"An error occurred: {str(e)}"
 
+class VideoTransformer(VideoTransformerBase):
+    def __init__(self):
+        self.models = models
+
+    def transform(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+
+        # Perform object detection
+        detected_img = img.copy()
+        for name, model in self.models.items():
+            results = model(detected_img)
+            if results and results[0].boxes:
+                for box in results[0].boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0].numpy())
+                    conf = box.conf[0].item()
+                    cls = int(box.cls[0].item())
+                    label = f"{name} ({conf:.2f})"
+                    color = (0, 255, 0) if name == "leaf" else (255, 0, 0) if name == "flower" else (0, 0, 255)
+                    cv2.rectangle(detected_img, (x1, y1), (x2, y2), color, 2)
+                    cv2.putText(detected_img, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+        return av.VideoFrame.from_ndarray(detected_img, format="bgr24")
 # Streamlit UI styles
 st.markdown(
     """
@@ -67,55 +90,10 @@ st.markdown(
 st.markdown("<h1>Hello, Plant Lover!</h1>", unsafe_allow_html=True)
 
 # Live Video Detection Section
-# st.markdown("<h3>Live Plant Detection</h3>", unsafe_allow_html=True)
+st.markdown("<h3>Live Plant Detection</h3>", unsafe_allow_html=True)
+webrtc_streamer(key="plant-detection", video_transformer_factory=VideoTransformer)
 
-# # Get list of available cameras
-# def get_camera_list():
-#     camera_list = []
-#     for i in range(5):  # Check first 5 camera devices
-#         cap = cv2.VideoCapture(i)
-#         if cap.isOpened():
-#             camera_list.append(i)
-#             cap.release()
-#     return camera_list
 
-# # Dropdown to select the camera
-# camera_list = get_camera_list()
-# selected_camera = st.selectbox("Select Camera", camera_list)
-
-# # Video capture toggle
-# video_capture = None
-# if st.button("Start Video Capture"):
-#     video_capture = cv2.VideoCapture(selected_camera)
-
-# if st.button("Stop Video Capture") and video_capture is not None:
-#     video_capture.release()
-#     cv2.destroyAllWindows()
-#     video_capture = None
-#     st.write("Video Capture Stopped.")
-
-# if video_capture and video_capture.isOpened():
-#     frame_placeholder = st.empty()  # Container for video frames
-#     ret, frame = video_capture.read()
-
-#     if not ret:
-#         st.error("Error: Unable to read the video feed.")
-#     else:
-#         # YOLO detection and bounding box drawing
-#         for name, model in models.items():
-#             results = model(frame)
-#             if results and results[0].boxes:
-#                 for box in results[0].boxes:
-#                     x1, y1, x2, y2 = map(int, box.xyxy[0].numpy())
-#                     conf = box.conf[0].item()
-#                     cls = int(box.cls[0].item())
-#                     label = f"{name} ({conf:.2f})"
-#                     color = (0, 255, 0) if name == "leaf" else (255, 0, 0) if name == "flower" else (0, 0, 255)
-#                     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-#                     cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-#         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-#         frame_placeholder.image(rgb_frame, channels="RGB", use_column_width=True)
 
 # Image Upload and Classification
 st.markdown("<h3>Gallery</h3>", unsafe_allow_html=True)
